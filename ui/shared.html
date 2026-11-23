@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0b0c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Stash</title>
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="apple-touch-icon" href="/ui/stash-icon-512.png">
+    <link rel="stylesheet" href="/ui/shared.css">
+</head>
+<body class="shared-body">
+    <main class="shared-shell">
+        <header class="shared-header">
+            <a class="shared-brand" href="/" aria-label="Stash home">
+                <span class="shared-brand-mark" aria-hidden="true">S</span>
+                <span>Stash</span>
+            </a>
+            <button class="shared-text-button" id="sharedLogoutButton" type="button" hidden>Sign out</button>
+        </header>
+
+        <section class="shared-auth-card" id="sharedAuthCard" aria-labelledby="sharedAuthTitle">
+            <p class="shared-eyebrow">YOUR CLOUD LIBRARY</p>
+            <h1 id="sharedAuthTitle">Create your Stash account</h1>
+            <p class="shared-intro">Save files from your phone and browser in one private library.</p>
+
+            <form class="shared-auth-form" id="sharedAuthForm">
+                <label>
+                    <span>Email address</span>
+                    <input id="sharedEmail" name="email" type="email" autocomplete="email" autocapitalize="none" maxlength="254" required>
+                </label>
+                <label>
+                    <span>Password</span>
+                    <input id="sharedPassword" name="password" type="password" autocomplete="new-password" maxlength="1024" minlength="12" required>
+                </label>
+                <button class="shared-primary-button" id="sharedAuthSubmit" type="submit">Create account</button>
+            </form>
+
+            <p class="shared-message" id="sharedAuthMessage" role="status" aria-live="polite"></p>
+            <button class="shared-text-button shared-mode-button" id="sharedAuthModeButton" type="button">I already have an account</button>
+
+            <details class="shared-auth-alternative">
+                <summary>Use a phone number instead</summary>
+                <div class="shared-auth-form">
+                    <label>
+                        <span>Phone number with country code</span>
+                        <input id="sharedPhoneNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+14155552671" maxlength="20">
+                    </label>
+                    <label class="shared-phone-consent">
+                        <input id="sharedPhoneConsent" type="checkbox">
+                        <span>I agree to receive a one-time SMS verification code. Message and data rates may apply.</span>
+                    </label>
+                    <button class="shared-primary-button" id="sharedSendPhoneCode" type="button" disabled>Send verification code</button>
+                    <label id="sharedPhoneCodeField" hidden>
+                        <span>Verification code</span>
+                        <input id="sharedPhoneCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10">
+                    </label>
+                    <button class="shared-primary-button" id="sharedVerifyPhoneCode" type="button" hidden>Verify and open Stash</button>
+                    <div id="sharedPhoneRecaptcha" aria-hidden="true"></div>
+                </div>
+            </details>
+
+            <details class="shared-auth-alternative">
+                <summary>Sign in to an older username account</summary>
+                <form class="shared-auth-form" id="sharedLegacyAuthForm">
+                    <label>
+                        <span>Username</span>
+                        <input id="sharedLegacyUsername" name="username" autocomplete="username" autocapitalize="none" maxlength="32" minlength="3" required>
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input id="sharedLegacyPassword" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+                    </label>
+                    <button class="shared-primary-button" type="submit">Sign in</button>
+                </form>
+            </details>
+        </section>
+
+        <section class="shared-workspace" id="sharedWorkspace" hidden>
+            <div class="shared-welcome">
+                <div>
+                    <p class="shared-eyebrow">PRIVATE LIBRARY</p>
+                    <h1>Welcome, <span id="sharedUsernameLabel">there</span></h1>
+                    <p>Use this page on your phone or computer. Your saved files stay private to your account.</p>
+                </div>
+                <span class="shared-cloud-status" id="sharedCloudStatus">Checking cloud storage…</span>
+            </div>
+
+            <section class="shared-card shared-upload-card" aria-labelledby="sharedUploadTitle">
+                <div>
+                    <h2 id="sharedUploadTitle">Add from your phone</h2>
+                    <p>Choose a video, image, or audio file from Photos or Files. Stash saves the media file itself to your library.</p>
+                </div>
+                <label class="shared-upload-picker" for="sharedFilePicker">
+                    <span>Choose file</span>
+                    <input id="sharedFilePicker" type="file" accept="video/*,audio/*,image/*" multiple>
+                </label>
+                <p class="shared-message" id="sharedUploadMessage" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="shared-card shared-link-card" aria-labelledby="sharedLinkTitle">
+                <div>
+                    <h2 id="sharedLinkTitle">Save a video page link</h2>
+                    <p>This saves the page address for later. To save the video file, choose it from Photos or Files above.</p>
+                </div>
+                <form class="shared-link-form" id="sharedLinkForm">
+                    <label class="shared-link-input-label" for="sharedLinkInput">Video page address</label>
+                    <input id="sharedLinkInput" type="url" inputmode="url" placeholder="https://…" autocomplete="url" required>
+                    <button class="shared-primary-button" id="sharedLinkSubmit" type="submit">Save link</button>
+                </form>
+                <p class="shared-message" id="sharedLinkMessage" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="shared-phone-note" aria-label="Phone sharing help">
+                <strong>From a video app:</strong>
+                <span>On Android, install Stash from Chrome’s menu, then choose Stash from the Share menu. Sharing a video file saves it; sharing a page saves its link. On iPhone, use Choose file for the video itself, or paste a copied page link above.</span>
+            </section>
+
+            <section class="shared-card shared-pairing-card" aria-labelledby="sharedPairingTitle">
+                <div>
+                    <h2 id="sharedPairingTitle">Connect Chrome extension</h2>
+                    <p>Install Stash in Chrome on a laptop, then open its extension icon and paste a one-time pairing code.</p>
+                </div>
+                <div class="shared-pairing-controls">
+                    <button class="shared-primary-button" id="sharedCreatePairingButton" type="button">Create pairing code</button>
+                    <output class="shared-pairing-code" id="sharedPairingCode" hidden aria-live="polite"></output>
+                </div>
+                <p class="shared-pairing-note" id="sharedPairingNote">A code works for 10 minutes and can be used once.</p>
+            </section>
+
+            <section class="shared-card shared-browser-card" aria-labelledby="sharedBrowsersTitle">
+                <div class="shared-browser-heading">
+                    <div>
+                        <h2 id="sharedBrowsersTitle">Connected browsers</h2>
+                        <p>Only these browsers can save copies into your Stash library.</p>
+                    </div>
+                    <button class="shared-text-button" id="sharedRefreshExtensionsButton" type="button">Refresh</button>
+                </div>
+                <p class="shared-browser-empty" id="sharedExtensionsEmpty">No browser is connected yet.</p>
+                <ul class="shared-extension-list" id="sharedExtensionsList"></ul>
+            </section>
+
+            <section class="shared-library-section" aria-labelledby="sharedLibraryTitle">
+                <div class="shared-library-heading">
+                    <div>
+                        <p class="shared-eyebrow">SAVED ITEMS</p>
+                        <h2 id="sharedLibraryTitle">Your library</h2>
+                    </div>
+                    <button class="shared-text-button" id="sharedRefreshButton" type="button">Refresh</button>
+                </div>
+                <p class="shared-library-empty" id="sharedLibraryEmpty">Your saved files will appear here.</p>
+                <div class="shared-library-grid" id="sharedLibraryGrid" aria-live="polite"></div>
+            </section>
+        </section>
+
+        <section class="shared-unavailable" id="sharedUnavailable" hidden>
+            <h1>Shared Stash is not ready yet.</h1>
+            <p>This server needs public shared mode and Firebase Storage before it can accept account uploads.</p>
+        </section>
+    </main>
+    <script type="module" src="/ui/shared.js"></script>
+</body>
+</html>

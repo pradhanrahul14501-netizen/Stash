@@ -1,0 +1,10 @@
+{
+  "api_key": "PASTE_FIREBASE_WEB_API_KEY_HERE",
+  "auth_domain": "YOUR_FIREBASE_PROJECT.firebaseapp.com",
+  "project_id": "YOUR_FIREBASE_PROJECT_ID",
+  "storage_bucket": "YOUR_FIREBASE_PROJECT.firebasestorage.app",
+  "app_id": "PASTE_FIREBASE_WEB_APP_ID_HERE",
+  "messaging_sender_id": "PASTE_FIREBASE_MESSAGING_SENDER_ID_HERE",
+  "enabled_providers": ["google"],
+  "service_account_path": "firebase-admin.json"
+}

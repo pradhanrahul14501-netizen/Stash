@@ -1,0 +1,1 @@
+"""Stash HTTP route domains."""

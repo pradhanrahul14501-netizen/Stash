@@ -1,0 +1,75 @@
+name: Stash checks
+
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - "stash-rc-*"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos-isolated-tests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Parse tracked Python source
+        run: |
+          python - <<'PY'
+          import ast
+          import subprocess
+          from pathlib import Path
+          files = subprocess.check_output(["git", "ls-files", "-z", "*.py"]).decode().split("\0")
+          for filename in filter(None, files):
+              ast.parse(Path(filename).read_text(encoding="utf-8"), filename=filename)
+          print("Python syntax is valid; this is not a correctness test.")
+          PY
+      - name: Check JavaScript, JSON, and shell syntax
+        run: |
+          for file in ui/*.js browser-extension/*.js; do node --check "$file"; done
+          node --check browser-extension/tests/consent.test.cjs
+          python -m json.tool browser-extension/manifest.json >/dev/null
+          python -m json.tool ui/stash.webmanifest >/dev/null
+          bash -n scripts/stash
+      - name: Prove extension capture waits for content consent
+        run: node browser-extension/tests/consent.test.cjs
+      - name: Run the isolated API test suite
+        run: ./scripts/stash test
+
+  browser-release-candidate:
+    if: startsWith(github.ref, 'refs/tags/stash-rc-') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked Python dependencies
+        run: STASH_VENV_DIR="$RUNNER_TEMP/stash-venv" ./scripts/stash setup
+      - name: Install browser test runner
+        run: |
+          "$RUNNER_TEMP/stash-venv/bin/python" -m pip install --disable-pip-version-check --no-cache-dir -r requirements-browser-test.txt
+          "$RUNNER_TEMP/stash-venv/bin/python" -m playwright install chromium
+      - name: Run isolated capture, search, open, and restart journey
+        env:
+          STASH_VENV_DIR: ${{ runner.temp }}/stash-venv
+          STASH_BROWSER_ARTIFACT_DIR: ${{ runner.temp }}/stash-browser-artifacts
+        run: >-
+          "$RUNNER_TEMP/stash-venv/bin/python" scripts/test-browser-journey.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stash-browser-journey
+          path: ${{ runner.temp }}/stash-browser-artifacts
+          if-no-files-found: ignore

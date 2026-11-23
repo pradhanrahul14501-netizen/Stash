@@ -1,0 +1,27 @@
+model: mlx-community/Qwen3-8B-4bit
+train: true
+fine_tune_type: lora
+optimizer: adamw
+data: data
+seed: 20261016
+num_layers: 4
+batch_size: 1
+grad_accumulation_steps: 8
+iters: 600
+val_batches: 25
+learning_rate: 0.00001
+steps_per_report: 10
+steps_per_eval: 100
+adapter_path: outputs/ava-qwen3-8b-4bit-adapter
+save_every: 100
+test: false
+max_seq_length: 2048
+grad_checkpoint: true
+mask_prompt: true
+lora_parameters:
+  keys:
+    - self_attn.q_proj
+    - self_attn.v_proj
+  rank: 16
+  scale: 32.0
+  dropout: 0.05

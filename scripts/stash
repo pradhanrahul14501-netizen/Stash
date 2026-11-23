@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${STASH_PYTHON:-python3}"
+VENV_DIR="${STASH_VENV_DIR:-$ROOT/.venv}"
+ACTION="${1:-run}"
+
+if [[ "$ACTION" != "run" && "$ACTION" != "setup" && "$ACTION" != "test" ]]; then
+    printf 'Usage: %s [run|setup|test]\n' "$0" >&2
+    exit 2
+fi
+
+if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+    if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+        printf 'Stash needs Python 3.14 on macOS. Install Python, then run %s again.\n' "$0" >&2
+        exit 1
+    fi
+    "$PYTHON_BIN" -m venv "$VENV_DIR" || {
+        printf 'Stash could not create its Python environment at %s. Check Python and folder permissions.\n' "$VENV_DIR" >&2
+        exit 1
+    }
+fi
+
+if ! "$VENV_DIR/bin/python" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 14) else 1)'; then
+    printf 'This lock file targets Python 3.14 on macOS. Set STASH_PYTHON to a Python 3.14 executable and retry.\n' >&2
+    exit 1
+fi
+
+"$VENV_DIR/bin/python" -m pip install --disable-pip-version-check --no-cache-dir -q -r "$ROOT/requirements-macos.lock" || {
+    printf 'Stash could not install its locked dependencies. Check the network connection and Python version, then retry.\n' >&2
+    exit 1
+}
+"$VENV_DIR/bin/python" -m pip check || {
+    printf 'Stash has conflicting Python packages. Recreate the environment and retry.\n' >&2
+    exit 1
+}
+
+if [[ "$ACTION" == "setup" ]]; then
+    printf 'Stash dependencies are ready. Start it with: %s\n' "$0"
+    exit 0
+fi
+
+if [[ "$ACTION" == "test" ]]; then
+    TEST_STORAGE="$(mktemp -d "${TMPDIR:-/tmp}/stash-test.XXXXXX")"
+    printf 'Running tests with isolated temporary storage: %s\n' "$TEST_STORAGE"
+    STASH_TEST_MODE=1 \
+    STASH_STORAGE_DIR="$TEST_STORAGE" \
+    STASH_DISABLE_CLIPBOARD_MONITOR=1 \
+        "$VENV_DIR/bin/python" "$ROOT/scripts/run-tests.py"
+    exit $?
+fi
+
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    printf 'This beta requires macOS. Stash uses macOS Keychain, Finder, and the system clipboard.\n' >&2
+    exit 1
+fi
+
+exec "$VENV_DIR/bin/python" "$ROOT/main.py"

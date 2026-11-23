@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <title>Stash</title>
+    <link rel="icon" type="image/svg+xml" href="/ui/stash-logo.svg">
+    <link rel="stylesheet" href="/ui/style.css">
+    <link rel="stylesheet" href="/ui/finder-files.css">
+    <!-- PETS-5 -->
+    <link rel="stylesheet" href="/ui/pet5.css">
+    <!-- STASH-SPLASH: visual layer for the launch splash component. -->
+    <link rel="stylesheet" href="/ui/splash.css">
+</head>
+
+<body>
+<!-- STASH-SPLASH: splash.js fills this mount before the main UI is parsed. -->
+<div id="stashSplashMount"></div>
+<script src="/ui/splash.js"></script>
+
+<section class="auth-screen" id="authScreen" role="main">
+    <section class="auth-card" aria-labelledby="authTitle">
+        <div class="auth-brand-mark" aria-hidden="true"><img src="/ui/stash-logo.svg" alt=""></div>
+        <p class="auth-eyebrow">COPY IT. FIND IT AGAIN.</p>
+        <h1 id="authTitle">Create your local library</h1>
+        <p class="auth-subtitle" id="authSubtitle">Save a copy here, then find it again when you need it.</p>
+
+        <form id="authForm" class="auth-form" autocomplete="on">
+            <label class="auth-field" for="authUsername">
+                <span>Username</span>
+                <input id="authUsername" name="username" type="text" minlength="3" maxlength="32" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+            </label>
+            <label class="auth-field" for="authPassword">
+                <span>Password</span>
+                <input id="authPassword" name="password" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required>
+            </label>
+            <label class="auth-field" id="authConfirmField" for="authPasswordConfirm">
+                <span>Confirm password</span>
+                <input id="authPasswordConfirm" name="password_confirm" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required>
+            </label>
+            <button class="auth-submit" id="authSubmit" type="submit">Create account</button>
+        </form>
+
+        <form id="twoFactorLoginForm" class="auth-form" autocomplete="on" hidden>
+            <label class="auth-field" for="twoFactorLoginCode">
+                <span>Authenticator or recovery code</span>
+                <input id="twoFactorLoginCode" name="code" type="text" inputmode="text" autocomplete="one-time-code" maxlength="20" required>
+            </label>
+            <button class="auth-submit" id="twoFactorLoginSubmit" type="submit">Verify and sign in</button>
+            <button class="auth-alternative-button" id="cancelTwoFactorLogin" type="button">Back to sign in</button>
+        </form>
+
+        <div class="auth-alternatives" id="authAlternatives" hidden>
+            <span class="auth-divider"><span>or</span></span>
+            <button class="auth-alternative-button" id="chooseSignInButton" type="button">Choose another sign-in option</button>
+        </div>
+
+        <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+        <p class="auth-provider-note" id="authProviderNote">Google, Apple, and phone sign-in have not been set up yet.</p>
+        <p class="auth-footnote">Stash protects one local library on this Mac. Signing in on another device does not sync or move the files stored here.</p>
+    </section>
+</section>
+
+<dialog class="provider-dialog" id="providerDialog" aria-labelledby="providerDialogTitle">
+    <div class="provider-dialog-card">
+        <button class="provider-dialog-close" id="closeProviderDialog" type="button" aria-label="Close">×</button>
+        <p class="auth-eyebrow">STASH ACCOUNT</p>
+        <h2 id="providerDialogTitle">Choose a sign-in option</h2>
+        <p class="auth-subtitle" id="providerDialogSubtitle">Use Google, Apple, or a phone verification code.</p>
+        <div class="provider-buttons">
+            <button class="provider-button" id="googleProviderButton" type="button"><span class="provider-g-mark" aria-hidden="true">G</span>Continue with Google</button>
+            <button class="provider-button" id="appleProviderButton" type="button"><span class="provider-apple-mark" aria-hidden="true">●</span>Continue with Apple</button>
+            <button class="provider-button" id="phoneProviderButton" type="button"><span class="provider-phone-mark" aria-hidden="true">⌕</span>Continue with phone</button>
+        </div>
+        <section class="phone-auth-fields" id="phoneAuthFields" hidden>
+            <label class="auth-field" for="phoneNumberInput">
+                <span>Phone number with country code</span>
+                <input id="phoneNumberInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 123 4567">
+            </label>
+            <label class="phone-consent" for="phoneConsent">
+                <input id="phoneConsent" type="checkbox">
+                <span>I agree that Google may process my number for sign-in verification. Message and data rates may apply.</span>
+            </label>
+            <button class="provider-button provider-primary" id="sendPhoneCodeButton" type="button" disabled>Send verification code</button>
+            <label class="auth-field" id="phoneCodeField" for="phoneCodeInput" hidden>
+                <span>Verification code</span>
+                <input id="phoneCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10">
+            </label>
+            <button class="provider-button provider-primary" id="verifyPhoneCodeButton" type="button" hidden>Verify and continue</button>
+            <div id="phoneRecaptcha" aria-hidden="true"></div>
+        </section>
+        <p class="provider-message" id="providerMessage" role="status" aria-live="polite"></p>
+        <p class="auth-footnote">Your sign-in provider verifies your identity. Your Stash files stay on the Mac running the server.</p>
+    </div>
+</dialog>
+
+<div class="app" id="app" hidden>
+
+    <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation" hidden></button>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+        <div class="sidebar-top">
+
+            <div class="brand">
+                <div class="brand-mark"><img src="/ui/stash-logo.svg" alt=""></div>
+                <span class="brand-name">Stash</span>
+            </div>
+
+            <button
+                class="icon-button collapse-button"
+                id="collapseSidebar"
+                type="button"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+            >
+                ‹
+            </button>
+
+        </div>
+
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <div class="sidebar-heading">
+                    <span>LIBRARY</span>
+                </div>
+
+                <button class="nav-item active" data-type="all">
+                    <span class="nav-icon">⌘</span>
+                    <span class="nav-label">All copies</span>
+                    <span class="nav-count" id="countAll">0</span>
+                </button>
+
+                <button class="nav-item" id="finderNavigation" type="button" hidden>
+                    <span class="nav-icon" aria-hidden="true">▣</span>
+                    <span class="nav-label">Files</span>
+                </button>
+
+                <button class="nav-item bin-nav-item" id="binNavigation" data-view="bin" type="button">
+                    <span class="nav-icon">▱</span>
+                    <span class="nav-label">Bin</span>
+                    <span class="nav-count" id="countBin">0</span>
+                </button>
+            </div>
+
+            <div class="sidebar-section" id="folderSection">
+                <div class="sidebar-heading folder-sidebar-heading">
+                    <span>FOLDERS</span>
+                    <button id="newFolderButton" class="sidebar-heading-action" type="button" aria-label="Create folder" title="Create folder">＋</button>
+                </div>
+                <div id="folderNavigation" class="folder-navigation" aria-label="Folders"></div>
+            </div>
+
+            <details class="sidebar-section">
+                <summary class="sidebar-heading">MORE</summary>
+                <button class="nav-item" id="vaultNavigation" type="button" aria-haspopup="dialog" aria-controls="vaultDialog">
+                    <span class="nav-icon" aria-hidden="true">♙</span>
+                    <span class="nav-label">Vault</span>
+                    <span class="nav-count" id="vaultCount">0</span>
+                </button>
+            </details>
+
+            <details class="sidebar-section conversation-section">
+                <summary class="sidebar-heading">AVA CHATS</summary>
+                <div id="conversationList" class="conversation-list" aria-label="Recent Ava chats"></div>
+            </details>
+
+        </div>
+
+        <div class="sidebar-bottom">
+            <button class="nav-item bottom-item" id="settingsButton" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">
+                <span class="nav-icon">⚙</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </div>
+
+    </aside>
+
+    <!-- RESIZE HANDLE -->
+    <div
+        class="sidebar-resizer"
+        id="sidebarResizer"
+        title="Drag to resize sidebar"
+        aria-label="Resize sidebar"
+        hidden
+    ></div>
+
+
+    <!-- MAIN -->
+    <main class="main" id="libraryWorkspace">
+
+        <header class="topbar">
+
+            <button class="icon-button mobile-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+
+            <div class="page-title">
+                <h1>All copies</h1>
+                <p id="librarySubtitle">
+                    New copies appear here automatically.
+                </p>
+            </div>
+
+            <div class="top-actions">
+
+                <button class="ask-ava-button" id="avaToggle" type="button" aria-label="Open Ava chat">
+                    <span class="ava-orb" aria-hidden="true">A</span>
+                    <span>Ask Ava</span>
+                </button>
+
+                <button class="connect-auth-button" id="connectAuthButton" type="button" hidden>Connect sign-in</button>
+
+            </div>
+
+        </header>
+
+        <p class="phone-clipboard-toast" id="phoneClipboardToast" role="status" aria-live="polite" hidden></p>
+
+
+        <!-- SEARCH -->
+        <section class="search-section">
+
+            <div class="search-wrapper" id="searchWrapper">
+
+                <span class="search-symbol">⌕</span>
+
+                <input
+                    id="searchInput"
+                    type="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Find a copy by words, name, or link…"
+                    aria-label="Find a copy by words, name, or link"
+                >
+
+                <button
+                    class="clear-search"
+                    id="clearSearch"
+                    type="button"
+                    aria-label="Clear search"
+                    title="Clear search"
+                >
+                    ×
+                </button>
+
+                <span class="search-shortcut" aria-hidden="true">⌘ K</span>
+
+            </div>
+
+        </section>
+
+
+        <!-- TOOLBAR -->
+        <section class="toolbar">
+
+            <details class="filter-disclosure" id="filterDisclosure">
+                <summary id="filterSummary" aria-label="Open copy filters">
+                    <span id="filterSummaryText">Filter</span>
+                    <span class="filter-chevron" aria-hidden="true">⌄</span>
+                </summary>
+                <div class="filter-panel">
+                    <div class="filter-panel-heading">
+                        <strong>Filter copies</strong>
+                        <span>Choose a type or date</span>
+                    </div>
+
+                    <section class="filter-group" aria-labelledby="filterTypeTitle">
+                        <h2 id="filterTypeTitle">Type</h2>
+                        <div class="toolbar-left" role="group" aria-label="Filter by type">
+                            <button class="filter-button active" data-filter="all" type="button">All</button>
+                            <button class="filter-button" data-filter="text" type="button">Text</button>
+                            <button class="filter-button" data-filter="image" type="button">Images</button>
+                            <button class="filter-button" data-filter="audio" type="button">Audio</button>
+                            <button class="filter-button" data-filter="video" type="button">Videos</button>
+                            <button class="filter-button" data-filter="file" type="button">Files</button>
+                        </div>
+                    </section>
+
+                    <section class="filter-group" aria-labelledby="filterDateTitle">
+                        <h2 id="filterDateTitle">Date</h2>
+                        <form id="dateJumpForm" class="date-jump">
+                            <label for="dateJumpInput">Show copies from</label>
+                            <input id="dateJumpInput" type="date" aria-label="Copy date">
+                            <details class="filter-time-details">
+                                <summary>Choose an exact time</summary>
+                                <input id="timeJumpInput" type="time" aria-label="Copy time">
+                            </details>
+                            <div class="date-jump-actions">
+                                <button id="dateJumpButton" type="submit">Show copies</button>
+                                <button id="dateJumpClearButton" type="button">Clear</button>
+                            </div>
+                            <p id="dateJumpStatus" role="status" aria-live="polite">Choose a date or time.</p>
+                        </form>
+                        <div class="recent-date-list">
+                            <h3>Recent dates</h3>
+                            <div id="dateNavigation" class="date-navigation"></div>
+                        </div>
+                    </section>
+
+                    <details class="filter-advanced">
+                        <summary>Smart sections</summary>
+                        <div class="filter-mode-list" role="group" aria-label="Filter by smart section">
+                            <button class="filter-button smart-filter-button" data-filter="all" data-mode="developer" type="button">Developer</button>
+                            <button class="filter-button smart-filter-button" data-filter="all" data-mode="editor" type="button">Editor</button>
+                            <button class="filter-button smart-filter-button" data-filter="all" data-mode="student" type="button">Student</button>
+                        </div>
+                    </details>
+
+                    <div class="filter-panel-footer">
+                        <span>Sorted by</span>
+                        <button class="sort-button" id="sortButton" type="button" title="Change sort order">Newest first</button>
+                    </div>
+                </div>
+            </details>
+
+            <div class="toolbar-right">
+
+                <span id="resultSummary" class="result-summary">
+                    0 copies
+                </span>
+
+            </div>
+
+        </section>
+
+
+        <section class="bulk-action-bar" id="libraryBulkActions" aria-label="Select copies">
+            <span id="selectionSummary">Select copies to move them together.</span>
+            <div class="bulk-action-buttons">
+                <button id="selectAllButton" type="button">Select all</button>
+                <label class="visually-hidden" for="moveFolderSelect">Move selected copies to folder</label>
+                <select id="moveFolderSelect" aria-label="Choose a folder" disabled>
+                    <option value="">Choose folder…</option>
+                </select>
+                <button id="moveToFolderButton" type="button" disabled>Move to folder</button>
+                <button id="moveToBinButton" type="button" disabled>Move selected to Bin</button>
+                <button id="sendSelectedCopiesButton" type="button" disabled>Send to another Stash</button>
+            </div>
+        </section>
+
+        <section class="bin-panel" id="binPanel" hidden aria-label="Bin schedule and actions">
+            <div class="bin-panel-copy">
+                <h2>Bin</h2>
+                <p>Copies stay here until you restore them or choose to empty the Bin. A scheduled date is a reminder only.</p>
+                <p class="bin-schedule-status" id="binScheduleStatus"></p>
+            </div>
+            <div class="bin-schedule-controls">
+                <label for="binEmptyAt">Remind me to review the Bin on</label>
+                <input id="binEmptyAt" type="datetime-local">
+                <button id="saveBinScheduleButton" type="button">Schedule review</button>
+                <button id="cancelBinScheduleButton" type="button" hidden>Cancel date</button>
+            </div>
+            <div class="bin-bulk-controls">
+                <span id="binSelectionSummary">Select copies to restore them together.</span>
+                <button id="selectAllBinButton" type="button">Select all</button>
+                <button id="restoreSelectedButton" type="button" disabled>Restore selected</button>
+                <button id="emptyBinButton" class="danger-button" type="button" disabled>Empty Bin now</button>
+            </div>
+        </section>
+
+
+        <!-- CONTENT -->
+        <section class="library-content">
+
+            <div
+                id="emptyState"
+                class="empty-state"
+                hidden
+            >
+                <div class="empty-icon">⌕</div>
+                <h2>No copies found</h2>
+                <p>
+                    Try a different search, date, or type filter.
+                </p>
+            </div>
+
+
+            <div id="itemsContainer" class="items-container">
+                <!-- Groups inserted by JavaScript -->
+            </div>
+
+
+            <div
+                id="loadMoreContainer"
+                class="load-more-container"
+                hidden
+            >
+                <button
+                    id="loadMoreButton"
+                    class="load-more-button"
+                    type="button"
+                >
+                    Load more
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <main class="main finder-workspace" id="finderWorkspace" hidden aria-label="Files on this device">
+        <header class="topbar">
+            <button class="icon-button mobile-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+            <div class="page-title">
+                <h1>Files</h1>
+                <p id="finderCurrentPath">Connect a folder in Settings to browse its files.</p>
+            </div>
+            <div class="top-actions finder-top-actions">
+                <button class="settings-secondary-button" id="finderRefreshButton" type="button" disabled>Refresh</button>
+            </div>
+        </header>
+        <section class="finder-browser" aria-label="Connected folder contents">
+            <div class="finder-toolbar">
+                <nav class="finder-breadcrumbs" id="finderBreadcrumbs" aria-label="Folder path"></nav>
+                <label class="finder-search-label" for="finderSearchInput">Search this folder</label>
+                <input class="finder-search" id="finderSearchInput" type="search" placeholder="Search names…" autocomplete="off">
+            </div>
+            <input id="finderFallbackPicker" type="file" webkitdirectory directory multiple hidden>
+            <p class="finder-status" id="finderStatus" role="status" aria-live="polite">Your selected folder’s files will appear here.</p>
+            <div class="finder-file-list" id="finderFileList" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <dialog class="finder-preview-dialog" id="finderPreviewDialog" aria-labelledby="finderPreviewTitle">
+        <div class="finder-preview-card">
+            <header class="finder-preview-header">
+                <h2 id="finderPreviewTitle">File preview</h2>
+                <button class="provider-dialog-close" id="closeFinderPreview" type="button" aria-label="Close preview">×</button>
+            </header>
+            <div class="finder-preview-content" id="finderPreviewContent"></div>
+        </div>
+    </dialog>
+
+    <main class="chat-workspace" id="chatWorkspace" aria-label="Ava chat">
+        <section id="avaAssistant" class="ava-assistant">
+            <section id="avaPanel" class="ava-panel" aria-label="Ava AI Assistant">
+                <header class="ava-header">
+                    <div class="ava-header-actions">
+                        <button class="icon-button mobile-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+                        <button class="ava-new-chat" id="newCopyButton" type="button">New chat</button>
+                        <button class="icon-button" id="avaClose" type="button" aria-label="Open Stash library" title="Open library">▤</button>
+                    </div>
+                </header>
+
+                <div class="chat-content" id="chatContent">
+                    <section class="chat-empty-state" id="chatEmptyState" aria-labelledby="chatGreeting">
+                        <h1 id="chatGreeting">What can I help with?</h1>
+                        <p>Ask Ava to find files, search your copies, or help organize.</p>
+                        <div class="suggestion-grid" aria-label="Suggested prompts">
+                            <button class="suggestion-card" type="button" data-prompt="Find a file by name on my Mac">
+                                <span class="suggestion-icon" aria-hidden="true">⌕</span>
+                                <span><strong>Find a file</strong><small>Search your Mac by name or content</small></span>
+                            </button>
+                            <button class="suggestion-card" type="button" data-prompt="Find the copies I saved today">
+                                <span class="suggestion-icon" aria-hidden="true">◷</span>
+                                <span><strong>Find a saved copy</strong><small>Search the Stash library by date</small></span>
+                            </button>
+                            <button class="suggestion-card" type="button" data-prompt="Help me organize my Downloads folder">
+                                <span class="suggestion-icon" aria-hidden="true">⌘</span>
+                                <span><strong>Organize files</strong><small>Choose folders and review first</small></span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <div id="avaMessages" class="ava-messages" aria-live="polite" aria-label="Conversation" hidden></div>
+                    <button id="avaScrollBottom" class="scroll-bottom-button" type="button" aria-label="Scroll to latest message" title="Scroll to latest" hidden>↓</button>
+                </div>
+
+                <div id="avaTyping" class="ava-typing" role="status" aria-live="polite" hidden>
+                    <span class="typing-avatar" aria-hidden="true">A</span>
+                    <span class="typing-dots" aria-label="Ava is thinking"><i></i><i></i><i></i></span>
+                    <span class="typing-label">Ava is thinking</span>
+                </div>
+
+                <div id="avaConfirmation" class="ava-confirmation" hidden>
+                    <span class="confirmation-note">Review this action before Ava continues.</span>
+                    <div class="confirmation-actions">
+                        <button id="avaConfirmNo" type="button">Cancel</button>
+                        <button id="avaConfirmYes" type="button">Confirm</button>
+                    </div>
+                </div>
+
+                <div id="avaVoiceStatus" class="ava-voice-status" role="status" aria-live="polite"></div>
+
+                <div class="chat-composer-wrap">
+                    <input id="avaAttachmentInput" class="ava-attachment-input" type="file" tabindex="-1" aria-hidden="true" multiple>
+                    <div id="avaAttachments" class="ava-attachments" role="list" aria-label="Attachments" hidden></div>
+                    <form id="avaForm" class="ava-input-area">
+                        <button class="composer-library-button" id="avaLibraryButton" type="button" aria-label="Attach a file" title="Attach a file">＋</button>
+                        <textarea id="avaInput" rows="1" autocomplete="off" placeholder="Message Ava" aria-label="Message Ava"></textarea>
+                        <button type="button" id="avaVoiceButton" class="ava-voice-button" aria-label="Start voice input" title="Speak to Ava">🎙</button>
+                        <button type="button" id="avaStopButton" class="ava-stop-button" aria-label="Stop waiting for Ava" title="Stop" hidden>■</button>
+                        <button type="submit" id="avaSend" aria-label="Send message" title="Send">↑</button>
+                    </form>
+                    <p class="composer-disclaimer">Ava can make mistakes. File changes always require your confirmation.</p>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <aside class="ava-pet-widget" id="avaPetWidget" data-mood="curious" aria-label="Ava companion">
+        <div class="ava-pet-bubble" id="avaPetBubble" role="status" aria-live="polite" hidden></div>
+        <button class="ava-pet-mic" id="avaPetMicButton" type="button" aria-label="Talk to Ava" title="Talk to Ava">🎙</button>
+        <button class="ava-pet-button" id="avaPetButton" type="button" aria-label="Ava the Stash companion. Click for a message." title="Ava the Stash companion">
+            <svg class="ava-pet-art" viewBox="0 0 84 96" aria-hidden="true" focusable="false">
+                <ellipse class="ava-pet-shadow" cx="42" cy="89" rx="21" ry="4" />
+                <path class="ava-pet-antenna" d="M42 14V8" />
+                <circle class="ava-pet-antenna-tip" cx="42" cy="6" r="4" />
+                <rect class="ava-pet-ear" x="5" y="34" width="9" height="18" rx="4" />
+                <rect class="ava-pet-ear" x="70" y="34" width="9" height="18" rx="4" />
+                <rect class="ava-pet-head" x="12" y="15" width="60" height="48" rx="19" />
+                <rect class="ava-pet-screen" x="20" y="24" width="44" height="31" rx="11" />
+                <path class="ava-pet-brow" d="M28 32l5-2M51 30l5 2" />
+                <circle class="ava-pet-eye" cx="32" cy="38" r="3" />
+                <circle class="ava-pet-eye" cx="52" cy="38" r="3" />
+                <path class="ava-pet-eye-sparkle" d="M32 32l1.7 4.2L38 38l-4.3 1.7L32 44l-1.7-4.3L26 38l4.3-1.8zM52 32l1.7 4.2L58 38l-4.3 1.7L52 44l-1.7-4.3L46 38l4.3-1.8z" />
+                <path class="ava-pet-eye-smile" d="M28 39q4-6 8 0M48 39q4-6 8 0" />
+                <circle class="ava-pet-cheek" cx="25" cy="45" r="2.5" />
+                <circle class="ava-pet-cheek" cx="59" cy="45" r="2.5" />
+                <path class="ava-pet-mouth-smile" d="M36 46q6 5 12 0" />
+                <path class="ava-pet-mouth-neutral" d="M37 48h10" />
+                <circle class="ava-pet-mouth-worry" cx="42" cy="47" r="3" />
+                <path class="ava-pet-mouth-sad" d="M36 49q6-5 12 0" />
+                <path class="ava-pet-arm ava-pet-arm-left" d="M17 68l-7 8" />
+                <path class="ava-pet-arm ava-pet-arm-right" d="M67 68l7 8" />
+                <rect class="ava-pet-body" x="23" y="61" width="38" height="23" rx="11" />
+                <rect class="ava-pet-badge" x="36" y="68" width="12" height="8" rx="3" />
+                <path class="ava-pet-leg" d="M32 83v4M52 83v4" />
+            </svg>
+            <span class="ava-pet-name">Ava</span>
+        </button>
+    </aside>
+
+</div>
+
+
+<dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="settings-card">
+        <header class="settings-header">
+            <div>
+                <p class="auth-eyebrow">STASH</p>
+                <h2 id="settingsTitle">Settings</h2>
+                <p class="settings-intro">Account, cloud files, and app connections.</p>
+            </div>
+            <button class="provider-dialog-close" id="closeSettingsDialog" type="button" aria-label="Close settings">×</button>
+        </header>
+
+        <div class="settings-search-box">
+            <span aria-hidden="true">⌕</span>
+            <label class="visually-hidden" for="settingsSearch">Search settings</label>
+            <input id="settingsSearch" type="search" autocomplete="off" placeholder="Search all settings (video, privacy, account…)" aria-describedby="settingsSearchStatus">
+        </div>
+        <p id="settingsSearchStatus" class="settings-search-status" role="status" aria-live="polite"></p>
+
+        <section class="settings-section phone-access-section" aria-labelledby="phoneAccessTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="phoneAccessTitle">Open Stash on your phone</h3>
+                    <p>Put your phone and this Mac on the same Wi-Fi, scan the code, then sign in to your Stash library.</p>
+                </div>
+            </div>
+            <div class="phone-access-content">
+                <canvas id="phoneAccessQr" width="260" height="260" role="img" aria-label="QR code that opens Stash on this Mac" hidden></canvas>
+                <p id="phoneAccessStatus" class="settings-status" role="status" aria-live="polite">Finding this Mac’s private Wi-Fi address…</p>
+                <a id="phoneAccessLink" class="phone-access-link" hidden></a>
+                <div id="phoneAccessAlternates" class="phone-access-alternates" hidden>
+                    <p>Other addresses to try:</p>
+                    <div id="phoneAccessAlternateLinks"></div>
+                </div>
+                <button id="refreshPhoneAccess" class="settings-secondary-button" type="button">Refresh phone link</button>
+            </div>
+            <p class="settings-footnote">The QR code contains a private Wi-Fi address only. It does not include your password or sign-in details. If your phone cannot reach Stash, make sure both devices are on the same non-guest Wi-Fi; some routers prevent devices from connecting to each other.</p>
+        </section>
+
+        <details class="settings-disclosure">
+            <summary>Security</summary>
+            <section class="settings-section" aria-labelledby="securityDevicesTitle">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3 id="securityDevicesTitle">Connected devices and sessions</h3>
+                        <p>Review browsers and the Copy with Stash extension that can access this library. Revoke any device you no longer use.</p>
+                    </div>
+                </div>
+                <div class="settings-storage-actions">
+                    <button class="settings-secondary-button" id="refreshSecuritySessions" type="button">Refresh devices</button>
+                    <button class="settings-danger-button" id="revokeOtherSessions" type="button">Sign out other devices</button>
+                </div>
+                <p class="settings-status" id="securitySessionsStatus" role="status" aria-live="polite">Loading connected devices…</p>
+                <div class="security-session-list" id="securitySessionList"></div>
+                <p class="settings-footnote">Stash signs a browser out after 12 hours without use or 14 days total. Revoking the extension disconnects its saved access key.</p>
+            </section>
+
+            <section class="settings-section" aria-labelledby="twoFactorTitle">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3 id="twoFactorTitle">Two-step verification</h3>
+                        <p>Add an authenticator code when signing in with your Stash password or connected sign-in.</p>
+                    </div>
+                </div>
+                <p class="settings-status" id="twoFactorStatus" role="status" aria-live="polite">Checking two-step verification…</p>
+                <div class="settings-storage-actions">
+                    <button class="settings-primary-button" id="startTwoFactorSetup" type="button">Set up authenticator</button>
+                </div>
+                <div class="two-factor-setup" id="twoFactorSetupPanel" hidden>
+                    <p>Scan this code with an authenticator app, or enter this key manually:</p>
+                    <canvas id="twoFactorQr" width="220" height="220" role="img" aria-label="Authenticator setup QR code"></canvas>
+                    <code class="two-factor-secret" id="twoFactorSecret"></code>
+                    <label class="phone-clipboard-manual-label" for="twoFactorSetupCode">Enter the six-digit code from the app</label>
+                    <input class="settings-input" id="twoFactorSetupCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+                    <div class="settings-storage-actions">
+                        <button class="settings-primary-button" id="confirmTwoFactorSetup" type="button">Turn on two-step verification</button>
+                        <button class="settings-secondary-button" id="cancelTwoFactorSetup" type="button">Cancel</button>
+                    </div>
+                </div>
+                <div class="two-factor-recovery" id="twoFactorRecoveryPanel" hidden>
+                    <p><strong>Save these recovery codes now.</strong> Each code works once if you lose your authenticator. Stash won’t show them again.</p>
+                    <pre id="twoFactorRecoveryCodes"></pre>
+                    <button class="settings-secondary-button" id="copyTwoFactorRecoveryCodes" type="button">Copy recovery codes</button>
+                </div>
+                <div class="two-factor-disable" id="twoFactorDisablePanel" hidden>
+                    <label class="phone-clipboard-manual-label" for="twoFactorDisableCode">Enter a current authenticator code to turn it off</label>
+                    <input class="settings-input" id="twoFactorDisableCode" type="text" inputmode="text" autocomplete="one-time-code" maxlength="20">
+                    <button class="settings-danger-button" id="disableTwoFactor" type="button">Turn off two-step verification</button>
+                </div>
+            </section>
+
+            <section class="settings-section" aria-labelledby="remoteSecurityTitle">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3 id="remoteSecurityTitle">Network protection</h3>
+                        <p id="remoteSecurityStatus">Checking network protection…</p>
+                    </div>
+                </div>
+                <p class="settings-footnote">Phone and laptop access uses HTTP on your local Wi-Fi, so use a trusted private network. Stash blocks direct public-internet connections. To enable remote access, put it behind an HTTPS reverse proxy and list that proxy’s IP in COPY_MAKER_TRUSTED_PROXY_IPS.</p>
+            </section>
+
+            <section class="settings-section" aria-labelledby="backupSecurityTitle">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3 id="backupSecurityTitle">Encrypted backup and recovery</h3>
+                        <p>Create a password-protected backup of your library, saved files, and account settings. Backups can be up to 50 GB.</p>
+                    </div>
+                </div>
+                <label class="phone-clipboard-manual-label" for="backupPassword">Backup password (12 characters or more)</label>
+                <input class="settings-input" id="backupPassword" type="password" autocomplete="new-password" minlength="12" maxlength="1024">
+                <label class="phone-clipboard-manual-label" for="backupPasswordConfirm">Confirm backup password</label>
+                <input class="settings-input" id="backupPasswordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="1024">
+                <div class="settings-storage-actions">
+                    <button class="settings-primary-button" id="createEncryptedBackup" type="button">Create encrypted backup</button>
+                </div>
+                <label class="phone-clipboard-manual-label" for="restoreBackupFile">Restore from a Stash backup</label>
+                <input class="settings-input" id="restoreBackupFile" type="file" accept=".stashbackup,application/octet-stream">
+                <label class="phone-clipboard-manual-label" for="restoreBackupPassword">Backup password</label>
+                <input class="settings-input" id="restoreBackupPassword" type="password" autocomplete="current-password" maxlength="1024">
+                <div class="settings-storage-actions">
+                    <button class="settings-danger-button" id="restoreEncryptedBackup" type="button">Prepare restore</button>
+                </div>
+                <p class="settings-status" id="backupSecurityStatus" role="status" aria-live="polite">Use at least 12 characters and keep the password somewhere separate. Stash cannot recover it.</p>
+                <p class="settings-footnote">Create and restore backups from Stash on this Mac at http://127.0.0.1:5050; the password is not sent over Wi-Fi. A restore replaces the current Stash library on the next restart and signs all devices out.</p>
+            </section>
+        </details>
+
+        <section class="settings-section" aria-labelledby="privacySafetyTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="privacySafetyTitle">Privacy &amp; safety</h3>
+                    <p>Control what Stash collects, how long it keeps copies, and how local files are protected.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="toggleStashCapture" type="button" aria-pressed="true" disabled>Checking capture…</button>
+            </div>
+            <p class="settings-status" id="stashCaptureStatus" role="status" aria-live="polite">Checking capture status…</p>
+
+            <label class="phone-clipboard-manual-label" for="stashRetentionDays">Automatically delete copies after</label>
+            <select class="ava-pet-select" id="stashRetentionDays" disabled>
+                <option value="0">Keep until I delete them</option>
+                <option value="1">1 day</option>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="365">1 year</option>
+            </select>
+            <p class="settings-status" id="stashRetentionStatus" role="status" aria-live="polite">Copies are kept until you delete them.</p>
+            <label class="phone-clipboard-manual-label" for="captureExcludedApps">Never capture when these apps are in front</label>
+            <textarea class="settings-textarea" id="captureExcludedApps" rows="3" placeholder="com.apple.Terminal&#10;com.example.PasswordManager"></textarea>
+            <p class="settings-footnote">Enter app bundle IDs, one per line. This check is best-effort because macOS does not always identify which app placed the current clipboard item.</p>
+            <label class="phone-clipboard-manual-label" for="captureExcludedSites">Never capture from these websites</label>
+            <textarea class="settings-textarea" id="captureExcludedSites" rows="3" placeholder="example.com&#10;private.example.org"></textarea>
+            <p class="settings-footnote">Enter site domains, one per line. Subdomains are included. Browser capture stays user-initiated.</p>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="saveCaptureExclusions" type="button">Save exclusions</button>
+            </div>
+            <p class="settings-status" id="captureExclusionsStatus" role="status" aria-live="polite"></p>
+            <p class="settings-footnote">Stash cannot reliably tell which app produced each clipboard copy, so use Pause all capture to stop copying everywhere.</p>
+            <p class="settings-status" id="stashEncryptionStatus">Local Stash text and saved media are encrypted on this Mac. The library key stays in macOS Keychain.</p>
+            <p class="settings-footnote">Retention includes Trash. Vault items have their own lock and are deleted from Vault separately.</p>
+            <p class="settings-status" id="stashSharingStatus">Remote Shared Stash is off unless it is explicitly enabled by the server owner. New shared accounts are closed by default.</p>
+        </section>
+
+        <details class="settings-disclosure">
+            <summary>Connect a folder</summary>
+        <section class="settings-section" aria-labelledby="finderAccessTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="finderAccessTitle">Finder / File Explorer access</h3>
+                    <p>Choose a folder to browse its files in Stash. Access is read-only and limited to the folder you choose. Files stay on this device and are not uploaded.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-primary-button" id="connectFinderFolderButton" type="button">Allow folder access</button>
+                <button class="settings-secondary-button" id="changeFinderFolderButton" type="button" hidden>Choose a different folder</button>
+                <button class="settings-secondary-button" id="disconnectFinderFolderButton" type="button" hidden>Disconnect folder</button>
+            </div>
+            <p class="settings-status" id="finderAccessStatus" role="status" aria-live="polite">Nothing from Finder or File Explorer is shown until you allow access to a folder.</p>
+            <div class="settings-section-heading">
+                <div>
+                    <h4>Ava file access</h4>
+                    <p>Connect one folder for Ava to inspect and organize. Every change is previewed and must be confirmed. Enter the folder’s full path; browser folder permissions cannot be passed to Ava’s local file service.</p>
+                </div>
+            </div>
+            <label class="phone-clipboard-manual-label" for="avaConnectedFolderPath">Folder Ava may use</label>
+            <input class="settings-input" id="avaConnectedFolderPath" type="text" autocomplete="off" placeholder="/Users/you/Documents/Inbox" aria-describedby="avaConnectedFolderHelp">
+            <p class="settings-footnote" id="avaConnectedFolderHelp">Ava can read and change files in this folder and its subfolders only. To change the folder, connect a new one.</p>
+            <div class="settings-storage-actions">
+                <button class="settings-primary-button" id="connectAvaFolderButton" type="button">Connect folder to Ava</button>
+                <button class="settings-secondary-button" id="disconnectAvaFolderButton" type="button" hidden>Disconnect Ava</button>
+            </div>
+            <p class="settings-status" id="avaConnectedFolderStatus" role="status" aria-live="polite">Ava has no file access until you connect a folder here.</p>
+        </section>
+        </details>
+
+        <details class="settings-disclosure">
+            <summary>Account</summary>
+            <section class="settings-section" aria-labelledby="settingsAccountTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="settingsAccountTitle">Account</h3>
+                    <p id="settingsAccountStatus">Signed in to this Stash library.</p>
+                </div>
+                <span class="settings-account-avatar" id="settingsAccountAvatar" aria-hidden="true">S</span>
+            </div>
+            <div class="settings-account-actions">
+                <button class="settings-secondary-button" id="settingsConnectGoogle" type="button">Connect Google</button>
+                <button class="settings-danger-button" id="settingsSignOut" type="button">Sign out</button>
+            </div>
+            </section>
+        </details>
+
+        <details class="settings-disclosure">
+            <summary>More settings</summary>
+            <section class="settings-section" aria-labelledby="appearanceTitle">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3 id="appearanceTitle">Appearance</h3>
+                        <p>Change how Stash looks on this device.</p>
+                    </div>
+                </div>
+                <button class="settings-secondary-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme">
+                    <span id="themeIcon" aria-hidden="true">☼</span>
+                    <span id="themeLabel">Light appearance</span>
+                </button>
+            </section>
+        <section class="settings-section" aria-labelledby="avaCompanionSettingsTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="avaCompanionSettingsTitle">Companion</h3>
+                    <p>Your selected companion stays hidden until you press its shortcut. Press it again to hide the companion.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="avaPetShortcutButton" type="button">Change shortcut</button>
+                <span class="settings-status" id="avaPetShortcutStatus" role="status" aria-live="polite">Option + A</span>
+            </div>
+            <div class="ava-pet-preference-row">
+                <label for="avaPetChoice">Companion</label>
+                <select class="ava-pet-select" id="avaPetChoice" aria-label="Choose your companion"></select>
+            </div>
+            <div class="ava-pet-preference-row">
+                <label for="avaPetVoiceStyle">Pet voice</label>
+                <select class="ava-pet-select" id="avaPetVoiceStyle">
+                    <option value="natural">Natural device voice</option>
+                    <option value="cartoon" selected>Cartoon voice</option>
+                    <option value="off">Silent</option>
+                </select>
+            </div>
+            <p class="settings-status">Natural uses the voice available in your browser. Stash doesn’t record or clone your voice.</p>
+            <p class="settings-status">Use the shortcut while Stash is open to show or hide your companion.</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="workspaceModesTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="workspaceModesTitle">Smart sections</h3>
+                    <p>Automatically sort new copies into Developer, Editor, or Student. Matching runs locally on this Mac; unrecognized text stays in All.</p>
+                </div>
+            </div>
+            <div class="smart-mode-setting-list">
+                <article class="smart-mode-setting">
+                    <div>
+                        <h4>Developer mode</h4>
+                        <p>Code snippets and source files go to Developer.</p>
+                    </div>
+                    <button class="settings-secondary-button smart-mode-toggle" data-smart-mode="developer" type="button" aria-pressed="false" disabled>Loading…</button>
+                </article>
+                <article class="smart-mode-setting">
+                    <div>
+                        <h4>Editor mode</h4>
+                        <p>Copied video, audio, and images go to Editor.</p>
+                    </div>
+                    <button class="settings-secondary-button smart-mode-toggle" data-smart-mode="editor" type="button" aria-pressed="false" disabled>Loading…</button>
+                </article>
+                <article class="smart-mode-setting">
+                    <div>
+                        <h4>Student mode</h4>
+                        <p>Study notes, class material, and learning prompts go to Student.</p>
+                    </div>
+                    <button class="settings-secondary-button smart-mode-toggle" data-smart-mode="student" type="button" aria-pressed="false" disabled>Loading…</button>
+                </article>
+            </div>
+            <p class="settings-status" id="workspaceModesStatus" role="status" aria-live="polite">Checking smart section settings…</p>
+            <p class="settings-footnote">Unfiled copies also get a folder suggestion based on their type. Choose “File here” to move one, or create the suggested folder with one tap.</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="phoneClipboardTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="phoneClipboardTitle">Phone clipboard</h3>
+                    <p>Save plain text, including copied page links, from this phone to the Stash library on the Mac running this server. Automatic capture works only while Stash is open and active in a browser that supports clipboard-change notifications; otherwise, tap Paste after copying.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions phone-clipboard-actions">
+                <button class="settings-secondary-button" id="togglePhoneClipboardCapture" type="button" aria-pressed="false">Enable automatic capture</button>
+                <button class="settings-primary-button" id="pasteLatestPhoneClipboard" type="button">Paste latest copied text</button>
+            </div>
+            <label class="phone-clipboard-manual-label" for="phoneClipboardManualInput">If clipboard access is blocked, paste the text here</label>
+            <textarea class="phone-clipboard-manual-input" id="phoneClipboardManualInput" rows="3" placeholder="Tap and hold, then choose Paste"></textarea>
+            <div class="settings-storage-actions phone-clipboard-actions">
+                <button class="settings-secondary-button" id="saveManualPhoneClipboard" type="button">Save pasted text</button>
+            </div>
+            <p class="settings-status" id="phoneClipboardStatus" role="status" aria-live="polite">Clipboard capture is off. Turn it on here, or use Paste to save the latest copied text.</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="settingsStorageTitle">
+            <div class="settings-section-heading settings-storage-heading">
+                <div>
+                    <h3 id="settingsStorageTitle">Firebase cloud storage</h3>
+                    <p>Upload only files you choose. Your demo limit is 2 GB.</p>
+                </div>
+                <span class="settings-storage-total" id="settingsStorageText">Checking…</span>
+            </div>
+            <div class="settings-storage-bar" role="progressbar" aria-label="Cloud storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="settingsStorageUsed"></div>
+            </div>
+            <p class="settings-status" id="settingsStorageStatus" role="status" aria-live="polite">Check Firebase Storage to see your usage.</p>
+            <p class="settings-footnote">Before the first upload, create a private Firebase Storage bucket. Firebase Storage requires Blaze billing; the app's 2 GB limit is separate from Firebase billing.</p>
+            <a class="settings-secondary-button settings-link-button settings-console-link" href="https://console.firebase.google.com/project/copymaker-89702/storage" target="_blank" rel="noopener">Open Firebase Storage setup</a>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="checkStorageButton" type="button">Check storage</button>
+                <button class="settings-primary-button" id="uploadCloudFilesButton" type="button">Upload files</button>
+                <input id="cloudStorageFilePicker" type="file" multiple hidden>
+            </div>
+            <ul class="cloud-file-list" id="cloudFileList" aria-label="Files in Firebase cloud storage"></ul>
+        </section>
+
+        <section class="settings-section" aria-labelledby="browserVideoCopyTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="browserVideoCopyTitle">Browser video copies</h3>
+                    <p>Allow Copy with Stash to capture videos from your browser and save them into this Stash library. When this is off, the extension blocks video copying.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="toggleBrowserVideoCopy" type="button" aria-pressed="false" disabled>Checking permission…</button>
+            </div>
+            <p class="settings-status" id="browserVideoCopyStatus" role="status" aria-live="polite">Checking video-copy permission…</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="localExtensionTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="localExtensionTitle">Connect a browser on this Mac</h3>
+                    <p>Create a one-time code, open the Stash extension menu, and paste it into “Connect this Mac Stash.” The code expires after 10 minutes and can be used once. Creating another code disconnects the current local extension until you pair it again.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="createLocalExtensionCode" type="button">Create one-time code</button>
+                <button class="settings-primary-button" id="copyLocalExtensionCode" type="button" hidden>Copy code</button>
+            </div>
+            <code class="settings-status" id="localExtensionCode" hidden></code>
+            <p class="settings-status" id="localExtensionStatus" role="status" aria-live="polite">Open Stash on this Mac to pair its browser extension.</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="deviceTransferTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="deviceTransferTitle">Receive copies from another laptop</h3>
+                    <p>Keep both laptops on the same Wi-Fi. Create a temporary address and one-time code here, then enter them on the sending Stash. The code expires after 10 minutes and works once.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="createDeviceTransferCode" type="button">Create receive code</button>
+                <button class="settings-primary-button" id="copyDeviceTransferDetails" type="button" hidden>Copy address + code</button>
+            </div>
+            <div class="device-transfer-receive-details" id="deviceTransferReceiveDetails" hidden>
+                <p>Address: <code id="deviceTransferReceiveAddress"></code></p>
+                <p>One-time code: <code id="deviceTransferReceiveCode"></code></p>
+            </div>
+            <p class="settings-status" id="deviceTransferReceiveStatus" role="status" aria-live="polite">Create a code when the other laptop is ready to send.</p>
+            <p class="settings-footnote">On the first transfer, macOS may ask you to allow Stash to accept a connection. Allow it while both laptops are on your private Wi-Fi.</p>
+        </section>
+
+        <section class="settings-section" aria-labelledby="mobileCompanionTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="mobileCompanionTitle">Connect Stash on Android</h3>
+                    <p>Pair over the same private Wi-Fi to review Ava file previews on your phone and keep Ava Follow-ups in sync. Pairing codes expire after 10 minutes and work once.</p>
+                </div>
+            </div>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="createMobileCompanionCode" type="button">Create phone pairing code</button>
+                <button class="settings-secondary-button" id="revokeMobileCompanionPairing" type="button">Disconnect paired phone</button>
+            </div>
+            <div class="device-transfer-receive-details" id="mobileCompanionPairingDetails" hidden>
+                <p>Desktop address: <code id="mobileCompanionAddress"></code></p>
+                <p>One-time code: <code id="mobileCompanionCode"></code></p>
+            </div>
+            <p class="settings-status" id="mobileCompanionStatus" role="status" aria-live="polite">Pair your Android app to review Ava file actions and sync reminders.</p>
+            <div id="desktopFollowUps" class="settings-status" aria-live="polite"></div>
+        </section>
+
+        <section class="settings-section" aria-labelledby="settingsIntegrationsTitle">
+            <div class="settings-section-heading">
+                <div>
+                    <h3 id="settingsIntegrationsTitle">App integrations</h3>
+                    <p>Use your saved files in the apps you already work in.</p>
+                </div>
+            </div>
+            <div class="settings-integrations">
+                <article class="settings-integration-card">
+                    <div class="settings-integration-mark" aria-hidden="true">C</div>
+                    <div class="settings-integration-copy">
+                        <h4>CapCut</h4>
+                        <p>Send a saved clip to CapCut. Stash opens CapCut and shows the staged copy in Finder; import it into your project.</p>
+                        <button class="settings-secondary-button" type="button" data-open-integration-folder="capcut">Open CapCut + import folder</button>
+                    </div>
+                </article>
+                <article class="settings-integration-card">
+                    <div class="settings-integration-mark" aria-hidden="true">D</div>
+                    <div class="settings-integration-copy">
+                        <h4>DaVinci Resolve</h4>
+                        <p>Send a saved clip to Resolve. Import it into the Media Pool, or use the optional Stash script.</p>
+                        <button class="settings-secondary-button" type="button" data-open-integration-folder="davinci">Open Resolve + import folder</button>
+                        <a class="settings-secondary-button settings-link-button" href="/integrations/davinci/CopyMakerImport.py" download>Download Resolve script</a>
+                        <a class="settings-secondary-button settings-link-button" href="/integrations/davinci/README.md" target="_blank" rel="noopener">View Resolve setup</a>
+                    </div>
+                </article>
+                <article class="settings-integration-card">
+                    <div class="settings-integration-mark" aria-hidden="true">⌘</div>
+                    <div class="settings-integration-copy">
+                        <h4>Cursor</h4>
+                        <p>Install the Stash plug-in to browse your local library from Cursor.</p>
+                        <button class="settings-secondary-button" type="button" data-open-integration-folder="cursor">Open Cursor + plug-in files</button>
+                        <a class="settings-secondary-button settings-link-button" href="/integrations/cursor/CopyMakerCursorPlugin.zip" download>Download Cursor plug-in</a>
+                        <a class="settings-secondary-button settings-link-button" href="/integrations/cursor/README.md" target="_blank" rel="noopener">View Cursor setup</a>
+                    </div>
+                </article>
+            </div>
+            <p class="settings-footnote">From a saved media preview or cloud file, choose an app to prepare a separate local copy and open that app. CapCut and Resolve still need you to import the copy into a project; Cursor's plug-in can find local library files but does not edit video.</p>
+        </section>
+        </details>
+
+        <p class="settings-global-status" id="settingsGlobalStatus" role="status" aria-live="polite"></p>
+    </div>
+</dialog>
+
+
+<dialog class="settings-dialog vault-dialog" id="vaultDialog" aria-labelledby="vaultTitle">
+    <div class="settings-card">
+        <header class="settings-header">
+            <div>
+                <p class="auth-eyebrow">PRIVATE STORAGE</p>
+                <h2 id="vaultTitle">Vault</h2>
+                <p class="settings-intro">Sensitive copies are encrypted before they are saved here. Copies made while locked are discarded.</p>
+            </div>
+            <button class="provider-dialog-close" id="closeVaultDialog" type="button" aria-label="Close Vault">×</button>
+        </header>
+
+        <p class="settings-status" id="vaultStatus" role="status" aria-live="polite">Checking Vault…</p>
+
+        <section class="settings-section" id="vaultSetupPanel" hidden>
+            <div class="settings-section-heading">
+                <div>
+                    <h3>Create your Vault password</h3>
+                    <p>Choose a private password with at least 12 characters. Stash cannot recover it if you forget it.</p>
+                </div>
+            </div>
+            <label class="phone-clipboard-manual-label" for="vaultNewPassword">Vault password</label>
+            <input class="phone-clipboard-manual-input vault-password-input" id="vaultNewPassword" type="password" autocomplete="new-password" minlength="12">
+            <label class="phone-clipboard-manual-label" for="vaultConfirmPassword">Confirm password</label>
+            <input class="phone-clipboard-manual-input vault-password-input" id="vaultConfirmPassword" type="password" autocomplete="new-password" minlength="12">
+            <div class="settings-storage-actions">
+                <button class="settings-primary-button" id="createVaultButton" type="button">Create encrypted Vault</button>
+            </div>
+        </section>
+
+        <section class="settings-section" id="vaultUnlockPanel" hidden>
+            <label class="phone-clipboard-manual-label" for="vaultPassword">Vault password</label>
+            <input class="phone-clipboard-manual-input vault-password-input" id="vaultPassword" type="password" autocomplete="current-password">
+            <div class="settings-storage-actions">
+                <button class="settings-primary-button" id="unlockVaultButton" type="button">Unlock Vault</button>
+            </div>
+        </section>
+
+        <div id="vaultUnlockedPanel" hidden>
+            <section class="settings-section">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3>Capture all copied text</h3>
+                        <p>When enabled, every text copy goes to the Vault until you turn this off. Likely passwords, account details, and secret keys are routed here automatically. If the Vault is locked, sensitive copies are discarded.</p>
+                    </div>
+                </div>
+                <div class="settings-storage-actions">
+                    <button class="settings-secondary-button" id="toggleVaultCaptureAll" type="button" aria-pressed="false">Loading…</button>
+                    <button class="settings-secondary-button" id="lockVaultButton" type="button">Lock Vault</button>
+                </div>
+            </section>
+
+            <section class="settings-section">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3>Lock after inactivity</h3>
+                        <p>Stash locks the Vault after this much time without Vault activity. Unlock again before viewing or copying a secret.</p>
+                    </div>
+                </div>
+                <label class="phone-clipboard-manual-label" for="vaultIdleLockMinutes">Auto-lock time</label>
+                <select class="ava-pet-select" id="vaultIdleLockMinutes">
+                    <option value="1">1 minute</option>
+                    <option value="2">2 minutes</option>
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                </select>
+                <p class="settings-status" id="vaultIdleLockStatus" role="status" aria-live="polite">Vault locks after 5 minutes of inactivity.</p>
+            </section>
+
+            <section class="settings-section">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3>Add a secure note</h3>
+                        <p>Save a detail here manually when Stash does not recognize it as sensitive.</p>
+                    </div>
+                </div>
+                <label class="phone-clipboard-manual-label" for="vaultEntryTitle">Name</label>
+                <input class="phone-clipboard-manual-input vault-password-input" id="vaultEntryTitle" type="text" maxlength="120" placeholder="For example, personal account">
+                <label class="phone-clipboard-manual-label" for="vaultEntryContent">Private text</label>
+                <textarea class="phone-clipboard-manual-input" id="vaultEntryContent" rows="4" placeholder="Type or paste private text here"></textarea>
+                <div class="settings-storage-actions">
+                    <button class="settings-primary-button" id="saveVaultEntryButton" type="button">Save encrypted note</button>
+                </div>
+            </section>
+
+            <section class="settings-section">
+                <div class="settings-section-heading">
+                    <div>
+                        <h3>Saved items</h3>
+                        <p id="vaultEntriesSummary">Encrypted items in this Vault.</p>
+                    </div>
+                </div>
+                <div class="vault-entry-list" id="vaultEntryList" aria-live="polite"></div>
+            </section>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="settings-dialog folder-dialog" id="folderDialog" aria-labelledby="folderDialogTitle">
+    <div class="settings-card">
+        <header class="settings-header">
+            <div>
+                <p class="auth-eyebrow">ORGANIZE STASH</p>
+                <h2 id="folderDialogTitle">Create a folder</h2>
+                <p class="settings-intro">Keep copied files, videos, and other items together.</p>
+            </div>
+            <button class="provider-dialog-close" id="closeFolderDialog" type="button" aria-label="Close folder dialog">×</button>
+        </header>
+        <form id="folderForm">
+            <label class="phone-clipboard-manual-label" for="folderNameInput">Folder name</label>
+            <input class="phone-clipboard-manual-input vault-password-input" id="folderNameInput" type="text" maxlength="48" autocomplete="off" required>
+            <p class="settings-status" id="folderFormStatus" role="status" aria-live="polite"></p>
+            <div class="settings-storage-actions">
+                <button class="settings-secondary-button" id="cancelFolderButton" type="button">Cancel</button>
+                <button class="settings-primary-button" id="saveFolderButton" type="submit">Create folder</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+
+<!-- COPY VIEWER -->
+<div
+    id="copyViewer"
+    class="copy-viewer"
+    hidden
+    aria-hidden="true"
+>
+    <div class="viewer-backdrop" data-close-viewer></div>
+
+    <div
+        class="viewer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="viewerTitle"
+    >
+
+        <div class="viewer-header">
+
+            <div>
+                <div class="viewer-eyebrow">
+                    COPY VIEWER
+                </div>
+
+                <h2 id="viewerTitle">
+                    Copy
+                </h2>
+            </div>
+
+            <button
+                class="viewer-close"
+                id="closeViewer"
+                type="button"
+                aria-label="Close viewer"
+                title="Close"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <div
+            id="viewerContent"
+            class="viewer-content"
+        ></div>
+
+    </div>
+</div>
+
+
+<dialog class="provider-dialog device-transfer-dialog" id="deviceTransferDialog" aria-labelledby="deviceTransferDialogTitle">
+    <div class="provider-dialog-card">
+        <button class="provider-dialog-close" id="closeDeviceTransferDialog" type="button" aria-label="Close transfer">×</button>
+        <p class="auth-eyebrow">STASH WI-FI TRANSFER</p>
+        <h2 id="deviceTransferDialogTitle">Send selected copies</h2>
+        <p class="auth-subtitle">Enter the address and one-time code shown in Settings on the receiving laptop. Videos and files are sent directly over your Wi-Fi.</p>
+        <form id="deviceTransferForm">
+            <label class="device-transfer-field" for="deviceTransferReceiverUrl">Receiving Stash address</label>
+            <input id="deviceTransferReceiverUrl" type="url" inputmode="url" placeholder="http://192.168.1.20:5052" autocomplete="url" required>
+            <label class="device-transfer-field" for="deviceTransferPairCode">One-time code</label>
+            <input id="deviceTransferPairCode" type="text" inputmode="text" placeholder="8-character code" autocomplete="one-time-code" maxlength="16" required>
+            <div class="device-transfer-progress" id="deviceTransferProgress" hidden>
+                <progress id="deviceTransferProgressBar" max="100" value="0"></progress>
+                <p id="deviceTransferProgressText" role="status" aria-live="polite"></p>
+            </div>
+            <p class="device-transfer-dialog-status" id="deviceTransferDialogStatus" role="status" aria-live="polite"></p>
+            <div class="device-transfer-dialog-actions">
+                <button class="settings-secondary-button" id="closeDeviceTransferDialogAction" type="button">Close</button>
+                <button class="settings-primary-button" id="startDeviceTransferButton" type="submit">Send copies</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- STASH-COMPANIONS: the legacy companion art is shown only by the shared shortcut. -->
+<div class="pet5-root" id="pet5Root" hidden>
+    <aside class="pet5-stage" id="pet5Stage" data-pet="orbi" data-mood="focused" aria-label="Pet companion" hidden>
+        <div class="pet5-glow" aria-hidden="true"></div>
+        <div class="pet5-bubble" id="pet5Bubble" role="status" aria-live="polite" hidden></div>
+        <button class="pet5-companion" id="pet5Companion" type="button" aria-label="Orbi, your focus buddy. Tap to pet, drag to move, long-press to chat, or double-tap for a trick.">
+            <span class="pet5-art-host" id="pet5ArtHost" aria-hidden="true"></span>
+            <span class="pet5-name" id="pet5Name">Orbi</span>
+        </button>
+        <span class="pet5-sr-only" id="pet5MeterStatus" aria-live="off"></span>
+    </aside>
+
+    <nav class="pet5-dock" aria-label="Pet controls">
+        <div class="pet5-picker-wrap">
+            <button class="pet5-picker-button" id="pet5PickerButton" type="button" aria-expanded="false" aria-controls="pet5PickerMenu" aria-label="Choose a companion">
+                <span class="pet5-picker-mark" aria-hidden="true">✦</span>
+                <span id="pet5PickerCurrent">Orbi</span>
+                <span class="pet5-picker-chevron" aria-hidden="true">⌃</span>
+            </button>
+            <div class="pet5-picker-menu" id="pet5PickerMenu" role="group" aria-label="Choose a pet" hidden>
+            </div>
+        </div>
+        <button class="pet5-control-button" id="pet5MuteButton" type="button" aria-pressed="false" aria-label="Mute all pets" title="Mute all pets">Mute</button>
+        <button class="pet5-control-button" id="pet5HideButton" type="button" aria-pressed="false" aria-label="Hide all pets">Hide</button>
+    </nav>
+</div>
+<!-- END PETS-5 -->
+
+<script src="/ui/companions.js"></script>
+<script src="/ui/ava-attachments.js"></script>
+<script src="/ui/app.js"></script>
+<script src="/ui/qrcodegen.js"></script>
+<script src="/ui/settings.js"></script>
+<script src="/ui/finder-files.js"></script>
+<script src="/ui/vault.js"></script>
+<script src="/ui/ava-pet.js"></script>
+<!-- PETS-5 -->
+<script src="/ui/pet5-engine.js"></script>
+<script src="/ui/pet5-components.js"></script>
+<script src="/ui/pet5.js"></script>
+<!-- END PETS-5 -->
+<script type="module" src="/ui/auth-providers.js"></script>
+
+</body>
+</html>

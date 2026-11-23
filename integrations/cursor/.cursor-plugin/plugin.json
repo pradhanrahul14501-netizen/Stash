@@ -1,0 +1,9 @@
+{
+  "name": "copy-maker-library",
+  "displayName": "Stash Library",
+  "version": "1.0.0",
+  "description": "Read-only tools for finding text and media saved in Stash on this Mac.",
+  "author": {
+    "name": "Stash"
+  }
+}

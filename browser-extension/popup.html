@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stash</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <main>
+        <header>
+            <span class="mark" aria-hidden="true">S</span>
+            <div>
+                <strong>Stash</strong>
+                <p id="connectionLabel">Local Stash · this Mac</p>
+            </div>
+        </header>
+
+        <button id="copyVideoButton" class="copy-video-button" type="button">Copy video</button>
+        <p class="message" id="message" data-kind="ready" role="status" aria-live="polite">Ready</p>
+        <p class="local-note" id="localNote">Saved on this Mac.</p>
+
+        <form id="localPairingForm" class="local-pairing-form">
+            <p class="hint">Create a one-time code in Stash Settings, then paste it here once.</p>
+            <label>
+                <span>Connect this Mac Stash</span>
+                <input id="localPairingCode" type="text" autocomplete="one-time-code" placeholder="One-time code from Stash Settings" aria-label="Stash one-time code">
+            </label>
+            <button id="connectLocalButton" class="secondary-button" type="submit">Connect local Stash</button>
+        </form>
+
+        <details class="advanced-settings">
+            <summary>Advanced / connect remote Stash</summary>
+            <p class="hint">Use this only for a remote Stash server. Remote connections require HTTPS, a one-time pairing code, and your consent.</p>
+            <form id="pairingForm">
+                <label>
+                    <span>Remote Stash website address</span>
+                    <input id="serverUrl" type="url" inputmode="url" placeholder="https://stash.example.com">
+                </label>
+                <label>
+                    <span>One-time pairing code</span>
+                    <textarea id="pairingCode" rows="3" placeholder="Paste a code from remote Stash Settings"></textarea>
+                </label>
+                <label class="consent-label">
+                    <input id="contentConsent" type="checkbox">
+                    <span>I agree that selected videos will be sent to this remote Stash server.</span>
+                </label>
+                <button id="connectButton" type="submit">Connect remote Stash</button>
+            </form>
+
+            <button id="disconnectButton" class="text-button" type="button" hidden>Disconnect remote Stash</button>
+            <details class="permission-details">
+                <summary>What the extension can access</summary>
+                <ul>
+                    <li>Active tab: inspect the page only after you click Copy video.</li>
+                    <li>Remote Stash: use the address and pairing code you provide here.</li>
+                    <li>Downloads and extension storage: handle selected media and remember this connection.</li>
+                </ul>
+            </details>
+        </details>
+    </main>
+    <script src="popup.js"></script>
+</body>
+</html>

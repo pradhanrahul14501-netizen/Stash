@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+android_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -z "${JAVA_HOME:-}" ]]; then
+    bundled_jdk="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+    if [[ -x "$bundled_jdk/bin/java" ]]; then
+        export JAVA_HOME="$bundled_jdk"
+    else
+        echo "Java was not found. Set JAVA_HOME to a JDK 25 installation or install Android Studio." >&2
+        exit 1
+    fi
+fi
+
+if [[ -z "${ANDROID_HOME:-}" ]]; then
+    export ANDROID_HOME="$HOME/Library/Android/sdk"
+fi
+
+if [[ ! -x "$JAVA_HOME/bin/java" ]]; then
+    echo "JAVA_HOME does not point to a working JDK: $JAVA_HOME" >&2
+    exit 1
+fi
+if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
+    echo "Android SDK platforms were not found under: $ANDROID_HOME" >&2
+    exit 1
+fi
+
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+exec "$android_dir/gradlew" "$@"
